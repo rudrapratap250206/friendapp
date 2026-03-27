@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Friends Online</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        color: #333;
+      }
+      .auth-section {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #ddd;
+      }
+      input {
+        padding: 8px;
+        margin-right: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        padding: 8px 15px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 5px;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      .logout-btn {
+        background-color: #f44336;
+      }
+      .logout-btn:hover {
+        background-color: #da190b;
+      }
+      #friends {
+        list-style: none;
+        padding: 0;
+      }
+      #friends li {
+        padding: 10px;
+        margin: 5px 0;
+        background-color: #e8f5e9;
+        border-left: 4px solid #4caf50;
+        border-radius: 4px;
+      }
+      .status {
+        color: #666;
+        font-size: 14px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Friends Online</h1>
+
+      <div class="auth-section">
+        <h3>User Authentication</h3>
+        <input type="email" id="email" placeholder="Enter your email" />
+        <button onclick="login()">Login</button>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+        <div class="status" id="status"></div>
+      </div>
+
+      <h2>Online Friends</h2>
+      <ul id="friends">
+        <li>Loading...</li>
+      </ul>
+    </div>
+
+    <script>
+      // Load online users on page load
+      loadOnlineFriends();
+      setInterval(loadOnlineFriends, 3000); // Refresh every 3 seconds
+
+      function loadOnlineFriends() {
+        fetch("/online-users")
+          .then((res) => res.json())
+          .then((data) => {
+            const list = document.getElementById("friends");
+            list.innerHTML = ""; // Clear list
+
+            if (data.length === 0) {
+              list.innerHTML = "<li>No friends online</li>";
+              return;
+            }
+
+            data.forEach((user) => {
+              const li = document.createElement("li");
+              li.textContent = user.name + " (" + user.email + ")";
+              list.appendChild(li);
+            });
+          })
+          .catch((err) => {
+            console.error("Error loading friends:", err);
+            const list = document.getElementById("friends");
+            list.innerHTML = "<li>Error loading friends</li>";
+          });
+      }
+
+      function login() {
+        const email = document.getElementById("email").value;
+        if (!email) {
+          alert("Please enter an email");
+          return;
+        }
+
+        fetch("/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: email }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.error) {
+              alert("Error: " + data.error);
+            } else {
+              document.getElementById("status").textContent =
+                "✓ Logged in as: " + email;
+              loadOnlineFriends();
+            }
+          })
+          .catch((err) => alert("Error logging in: " + err));
+      }
+
+      function logout() {
+        const email = document.getElementById("email").value;
+        if (!email) {
+          alert("Please enter an email");
+          return;
+        }
+
+        fetch("/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: email }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.error) {
+              alert("Error: " + data.error);
+            } else {
+              document.getElementById("status").textContent = "✓ Logged out";
+              loadOnlineFriends();
+            }
+          })
+          .catch((err) => alert("Error logging out: " + err));
+      }
+    </script>
+  </body>
+</html>
