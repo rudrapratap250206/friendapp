@@ -8,27 +8,54 @@ app.use(express.json());
 
 // MongoDB Connection with Retry Logic
 let dbConnected = false;
-const mongoURL = process.env.MONGODB_URL || "mongodb://localhost:27017/friendsDB";
+const mongoURL =
+  process.env.MONGODB_URL || "mongodb://localhost:27017/friendsDB";
 
-mongoose.connect(mongoURL, {
-  retryWrites: false,
-  serverSelectionTimeoutMS: 5000
-}).then(() => {
-  dbConnected = true;
-  console.log("✓ MongoDB connected successfully");
-}).catch(err => {
-  dbConnected = false;
-  console.warn("⚠ MongoDB connection failed - app will still run");
-  console.warn("Error:", err.message);
-  // Try to reconnect every 10 seconds
-  setInterval(() => {
-    mongoose.connect(mongoURL).then(() => {
+if (!process.env.MONGODB_URL) {
+  console.warn(
+    "⚠ MONGODB_URL not set. In Azure this should point to Atlas or remote DB."
+  );
+}
+
+const connectDB = () => {
+  mongoose
+    .connect(mongoURL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      retryWrites: true,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+    })
+    .then(() => {
       dbConnected = true;
-      console.log("✓ Reconnected to MongoDB");
-    }).catch(err => {
-      console.warn("MongoDB still unavailable");
+      console.log("✓ MongoDB connected successfully");
+    })
+    .catch((err) => {
+      dbConnected = false;
+      console.error("❌ MongoDB connection failed:", err.message);
+      console.error(
+        "Please check MONGODB_URL in Azure configuration and network access."
+      );
+      // Reconnect after delay
+      setTimeout(connectDB, 10000);
     });
-  }, 10000);
+};
+
+connectDB();
+
+mongoose.connection.on("connected", () => {
+  dbConnected = true;
+  console.log("✓ MongoDB reconnected");
+});
+
+mongoose.connection.on("error", (err) => {
+  dbConnected = false;
+  console.error("MongoDB error:", err.message);
+});
+
+mongoose.connection.on("disconnected", () => {
+  dbConnected = false;
+  console.warn("MongoDB disconnected.");
 });
 
 // User Schema
@@ -45,7 +72,7 @@ app.get("/health", (req, res) => {
   const health = {
     status: "OK",
     timestamp: new Date(),
-    database: dbConnected ? "Connected" : "Disconnected"
+    database: dbConnected ? "Connected" : "Disconnected",
   };
   res.status(dbConnected ? 200 : 503).json(health);
 });
@@ -113,11 +140,11 @@ app.listen(port, () => {
 });
 
 // Graceful error handling
-process.on("unhandledRejection", err => {
+process.on("unhandledRejection", (err) => {
   console.error("Unhandled Promise Rejection:", err);
 });
 
-process.on("uncaughtException", err => {
+process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err);
   console.log("Server still running...");
 });
