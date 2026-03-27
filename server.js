@@ -2,6 +2,10 @@ const express = require("express");
 const mongoose = require("mongoose");
 const app = express();
 
+// Disable mongoose buffering when not connected to avoid 'buffering timed out' errors
+mongoose.set("bufferCommands", false);
+mongoose.set("bufferMaxEntries", 0);
+
 // Middleware
 app.use(express.static("public"));
 app.use(express.json());
@@ -13,7 +17,7 @@ const mongoURL =
 
 if (!process.env.MONGODB_URL) {
   console.warn(
-    "⚠ MONGODB_URL not set. In Azure this should point to Atlas or remote DB."
+    "⚠ MONGODB_URL not set. In Azure this should point to Atlas or remote DB.",
   );
 }
 
@@ -25,6 +29,9 @@ const connectDB = () => {
       retryWrites: true,
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
+      maxPoolSize: 10,
+      family: 4,
     })
     .then(() => {
       dbConnected = true;
@@ -34,7 +41,7 @@ const connectDB = () => {
       dbConnected = false;
       console.error("❌ MongoDB connection failed:", err.message);
       console.error(
-        "Please check MONGODB_URL in Azure configuration and network access."
+        "Please check MONGODB_URL in Azure configuration and network access.",
       );
       // Reconnect after delay
       setTimeout(connectDB, 10000);
