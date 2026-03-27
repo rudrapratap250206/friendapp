@@ -15,6 +15,9 @@ let dbConnected = false;
 const mongoURL =
   process.env.MONGODB_URL || "mongodb://localhost:27017/friendsDB";
 
+// Helper to confirm if Mongo is really ready for queries
+const isMongoReady = () => dbConnected && mongoose.connection.readyState === 1;
+
 if (!process.env.MONGODB_URL) {
   console.warn(
     "⚠ MONGODB_URL not set. In Azure this should point to Atlas or remote DB.",
@@ -27,9 +30,9 @@ const connectDB = () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       retryWrites: true,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 120000,
+      connectTimeoutMS: 30000,
       maxPoolSize: 10,
       family: 4,
     })
@@ -86,7 +89,7 @@ app.get("/health", (req, res) => {
 
 // API to get online users
 app.get("/online-users", async (req, res) => {
-  if (!dbConnected) {
+  if (!isMongoReady()) {
     return res.status(503).json({ error: "Database not connected", users: [] });
   }
   try {
@@ -99,7 +102,7 @@ app.get("/online-users", async (req, res) => {
 
 // Login endpoint
 app.post("/login", async (req, res) => {
-  if (!dbConnected) {
+  if (!isMongoReady()) {
     return res.status(503).json({ error: "Database not connected" });
   }
   try {
@@ -117,7 +120,7 @@ app.post("/login", async (req, res) => {
 
 // Logout endpoint
 app.post("/logout", async (req, res) => {
-  if (!dbConnected) {
+  if (!isMongoReady()) {
     return res.status(503).json({ error: "Database not connected" });
   }
   try {
