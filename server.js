@@ -7,7 +7,11 @@ app.use(express.static("public"));
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect("mongodb://localhost:27017/friendsDB");
+const mongoURL = process.env.MONGODB_URL || "mongodb://localhost:27017/friendsDB";
+mongoose.connect(mongoURL).catch(err => {
+  console.error("MongoDB connection error:", err);
+  process.exit(1);
+});
 
 // User Schema
 const userSchema = new mongoose.Schema({
@@ -63,4 +67,8 @@ app.get("/", (req, res) => {
   res.send("Welcome to my friends website!");
 });
 
-app.listen(3000, () => console.log("Server running on http://localhost:3000"));
+// Azure Port Configuration
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});

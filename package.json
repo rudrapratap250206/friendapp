@@ -1,4 +1,12 @@
 {
+  "name": "friendapp",
+  "version": "1.0.0",
+  "description": "Friends online status application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
   "dependencies": {
     "express": "^5.2.1",
     "mongoose": "^7.0.0"
